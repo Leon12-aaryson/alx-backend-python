@@ -9,11 +9,14 @@ python-generators-0x00/
 ├── README.md                   # This file
 ├── seed.py                     # Database setup and seeding script
 ├── 0-stream_users.py          # Generator for streaming users
-├── 0-main.py                  # Test script
+├── 0-main.py                  # Test script for seed functionality
 ├── user_data.csv              # Sample data file
 ├── 1-batch_processing.py      # Batch processing generator
+├── 2-main.py                  # Test script for batch processing
 ├── 2-lazy_paginate.py         # Lazy pagination generator
-└── 4-stream_ages.py           # Stream ages generator
+├── 3-main.py                  # Test script for lazy pagination
+├── 4-stream_ages.py           # Stream ages generator
+└── test_all_generators.py     # Comprehensive test script
 ```
 
 ## Requirements
@@ -70,6 +73,37 @@ user_id,name,email,age
 ...
 ```
 
+### 1-batch_processing.py
+
+Contains generators for batch processing large datasets:
+
+- `stream_users_in_batches(batch_size)`: Generator that fetches users in batches
+- `batch_processing(batch_size)`: Processes each batch to filter users over age 25
+- Uses exactly 3 loops as required
+- Memory-efficient batch processing for large datasets
+
+### 2-lazy_paginate.py
+
+Implements lazy loading for paginated data:
+
+- `paginate_users(page_size, offset)`: Fetches a specific page of users
+- `lazy_paginate(page_size)`: Generator that lazily loads pages only when needed
+- Uses only 1 loop as required
+- Efficient for processing large datasets without loading everything into memory
+
+### 4-stream_ages.py
+
+Memory-efficient aggregation using generators:
+
+- `stream_user_ages()`: Generator that yields user ages one by one
+- `calculate_average_age()`: Calculates average age without loading entire dataset
+- Uses exactly 2 loops as required
+- Does not use SQL AVERAGE function, computes in Python
+
+### test_all_generators.py
+
+Comprehensive test script that demonstrates all generator patterns with mock data.
+
 ## Usage
 
 ### 1. Database Setup and Seeding
@@ -108,6 +142,51 @@ for batch in stream_users_in_batches(batch_size=100):
     print(f"Processing batch of {len(batch)} users")
     for user in batch:
         process_user(user)
+```
+
+### 4. Batch Processing
+
+```python
+from 1-batch_processing import stream_users_in_batches, batch_processing
+
+# Process users in batches of 50, filtering age > 25
+batch_processing(50)
+
+# Or use the generator directly
+for batch in stream_users_in_batches(100):
+    print(f"Processing batch of {len(batch)} users")
+    for user in batch:
+        if user['age'] > 25:
+            print(f"  - {user['name']} (Age: {user['age']})")
+```
+
+### 5. Lazy Pagination
+
+```python
+from 2-lazy_paginate import lazy_paginate
+
+# Lazily load pages of 100 users each
+for page_num, page in enumerate(lazy_paginate(100), 1):
+    print(f"Page {page_num}: {len(page)} users")
+    for user in page:
+        print(f"  - {user['name']}")
+```
+
+### 6. Memory-Efficient Aggregation
+
+```python
+from 4-stream_ages import stream_user_ages, calculate_average_age
+
+# Calculate average age efficiently
+average = calculate_average_age()
+
+# Or use the generator directly
+total_age = 0
+count = 0
+for age in stream_user_ages():
+    total_age += age
+    count += 1
+print(f"Average age: {total_age / count}")
 ```
 
 ## Configuration
