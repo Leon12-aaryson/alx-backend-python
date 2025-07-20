@@ -3,7 +3,7 @@
 Serializers for the messaging application.
 
 This module contains Django REST Framework serializers for the User,
-Conversation, and Message models with proper handling of relationships.
+Conversation, and Message models with proper handling of nested relationships.
 """
 
 from rest_framework import serializers
@@ -112,6 +112,21 @@ class MessageSerializer(serializers.ModelSerializer):
         return message
 
 
+class MessageSummarySerializer(serializers.ModelSerializer):
+    """
+    Simplified message serializer for nested relationships.
+    
+    Used when including message information within conversation serializers
+    to avoid circular dependencies and reduce payload size.
+    """
+    sender_id = UserSummarySerializer(read_only=True, source='sender_id')
+    
+    class Meta:
+        model = Message
+        fields = ['message_id', 'sender_id', 'message_body', 'sent_at']
+        read_only_fields = ['message_id', 'sent_at', 'sender_id']
+
+
 class ConversationSerializer(serializers.ModelSerializer):
     """
     Serializer for the Conversation model.
@@ -120,13 +135,25 @@ class ConversationSerializer(serializers.ModelSerializer):
     """
     participants_id = UserSummarySerializer(read_only=True)
     participant_id_input = serializers.UUIDField(write_only=True, source='participants_id')
+    messages = serializers.SerializerMethodField()
+    message_count = serializers.SerializerMethodField()
     
     class Meta:
         model = Conversation
         fields = [
-            'conversation_id', 'participants_id', 'participant_id_input', 'created_at'
+            'conversation_id', 'participants_id', 'participant_id_input', 
+            'messages', 'message_count', 'created_at'
         ]
-        read_only_fields = ['conversation_id', 'created_at', 'participants_id']
+        read_only_fields = ['conversation_id', 'created_at', 'participants_id', 'messages', 'message_count']
+    
+    def get_messages(self, obj):
+        """Get messages for this conversation."""
+        messages = obj.messages.all().order_by('-sent_at')[:10]  # Limit to last 10 messages
+        return MessageSummarySerializer(messages, many=True).data
+    
+    def get_message_count(self, obj):
+        """Get the total number of messages in this conversation."""
+        return obj.messages.count()
     
     def validate_participant_id_input(self, value):
         """Validate that the participant_id corresponds to an existing user."""
@@ -175,14 +202,23 @@ class ConversationCreateSerializer(serializers.ModelSerializer):
 
 class ConversationDetailSerializer(ConversationSerializer):
     """
-    Detailed conversation serializer.
+    Detailed conversation serializer with full message content.
     
-    Used for retrieving complete conversation details.
+    Used for retrieving complete conversation details including
+    all messages with sender information.
     """
+    messages = serializers.SerializerMethodField()
+    
     class Meta(ConversationSerializer.Meta):
         fields = [
-            'conversation_id', 'participants_id', 'participant_id_input', 'created_at'
+            'conversation_id', 'participants_id', 'participant_id_input', 
+            'messages', 'message_count', 'created_at'
         ]
+    
+    def get_messages(self, obj):
+        """Get all messages for this conversation."""
+        messages = obj.messages.all().order_by('-sent_at')
+        return MessageSummarySerializer(messages, many=True).data
 
 
 class MessageCreateSerializer(serializers.ModelSerializer):

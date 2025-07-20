@@ -109,6 +109,13 @@ class Message(models.Model):
         related_name='sent_messages',
         db_column='sender_id'
     )
+    conversation = models.ForeignKey(
+        Conversation,
+        on_delete=models.CASCADE,
+        related_name='messages',
+        null=True,
+        blank=True
+    )
     message_body = models.TextField(null=False, blank=False)
     sent_at = models.DateTimeField(auto_now_add=True)
     
@@ -116,6 +123,7 @@ class Message(models.Model):
         db_table = 'message'
         indexes = [
             models.Index(fields=['sent_at']),
+            models.Index(fields=['conversation', 'sent_at']),
         ]
         ordering = ['sent_at']
     
