@@ -224,4 +224,116 @@ This project follows Django best practices:
 - Admin interface configuration
 - REST framework integration
 - Nested routing for complex relationships
-- Advanced filtering and search capabilities 
+- Advanced filtering and search capabilities
+
+## Implementation Summary
+
+### Viewsets Implementation
+
+The application uses Django REST Framework viewsets to implement the API endpoints:
+
+#### **ConversationViewSet** (`chats/views.py`)
+```python
+class ConversationViewSet(viewsets.ModelViewSet):
+    permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    
+    def get_queryset(self):
+        """Return conversations where the current user is a participant."""
+        user = self.request.user
+        return Conversation.objects.filter(participants_id=user)
+    
+    def get_serializer_class(self):
+        """Return appropriate serializer based on action."""
+        if self.action == 'create':
+            return ConversationCreateSerializer
+        return ConversationSerializer
+    
+    def perform_create(self, serializer):
+        """Create conversation with current user as participant."""
+        return serializer.save()
+    
+    @action(detail=True, methods=['get'])
+    def participant(self, request, pk=None):
+        """Get participant information in a conversation."""
+        conversation = self.get_object()
+        participant = conversation.participants_id
+        serializer = UserSerializer(participant)
+        return Response(serializer.data)
+```
+
+#### **MessageViewSet** (`chats/views.py`)
+```python
+class MessageViewSet(viewsets.ModelViewSet):
+    permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    
+    def get_queryset(self):
+        """Return messages sent by the current user."""
+        user = self.request.user
+        return Message.objects.filter(sender_id=user)
+    
+    def get_serializer_class(self):
+        """Return appropriate serializer based on action."""
+        if self.action in ['create', 'send_message']:
+            return MessageCreateSerializer
+        return MessageSerializer
+    
+    def perform_create(self, serializer):
+        """Create message with current user as sender."""
+        serializer.save(sender_id=self.request.user)
+    
+    @action(detail=False, methods=['post'])
+    def send_message(self, request):
+        """Send a message."""
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            message = serializer.save(sender_id=request.user)
+            response_serializer = MessageSerializer(message)
+            return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+```
+
+### URL Configuration
+
+The endpoints are configured using `routers.DefaultRouter()`:
+
+```python
+# chats/urls.py
+from rest_framework import routers
+
+router = routers.DefaultRouter()
+router.register(r'conversations', ConversationViewSet, basename='conversation')
+router.register(r'messages', MessageViewSet, basename='message')
+
+urlpatterns = [
+    path('', include(router.urls)),
+    path('', include('rest_framework.urls')),
+]
+```
+
+### Endpoint Functionality
+
+#### **Creating Conversations**
+- **Endpoint**: `POST /api/conversations/`
+- **Method**: `ConversationViewSet.create()`
+- **Serializer**: `ConversationCreateSerializer`
+- **Functionality**: Creates a new conversation with the current user as participant
+
+#### **Sending Messages**
+- **Endpoint**: `POST /api/messages/send_message/`
+- **Method**: `MessageViewSet.send_message()`
+- **Serializer**: `MessageCreateSerializer`
+- **Functionality**: Sends a message with the current user as sender
+
+#### **Listing Conversations**
+- **Endpoint**: `GET /api/conversations/`
+- **Method**: `ConversationViewSet.list()`
+- **Serializer**: `ConversationSerializer`
+- **Functionality**: Lists all conversations where the user is a participant
+
+#### **Listing Messages**
+- **Endpoint**: `GET /api/messages/`
+- **Method**: `MessageViewSet.list()`
+- **Serializer**: `MessageSerializer`
+- **Functionality**: Lists all messages sent by the current user 
