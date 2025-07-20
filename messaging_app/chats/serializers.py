@@ -17,6 +17,11 @@ class UserSerializer(serializers.ModelSerializer):
     Handles user data serialization and deserialization with proper
     field validation and security considerations.
     """
+    first_name = serializers.CharField(max_length=150, required=True)
+    last_name = serializers.CharField(max_length=150, required=True)
+    email = serializers.EmailField(required=True)
+    phone_number = serializers.CharField(max_length=15, required=False, allow_blank=True)
+    role = serializers.ChoiceField(choices=User.ROLE_CHOICES, required=True)
     
     class Meta:
         model = User
@@ -27,10 +32,6 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at']
         extra_kwargs = {
             'password': {'write_only': True},
-            'email': {'required': True},
-            'first_name': {'required': True},
-            'last_name': {'required': True},
-            'role': {'required': True}
         }
     
     def create(self, validated_data):
@@ -59,6 +60,10 @@ class UserSummarySerializer(serializers.ModelSerializer):
     Used when including user information within other serializers
     to avoid circular dependencies and reduce payload size.
     """
+    first_name = serializers.CharField(read_only=True)
+    last_name = serializers.CharField(read_only=True)
+    email = serializers.EmailField(read_only=True)
+    role = serializers.CharField(read_only=True)
     
     class Meta:
         model = User
@@ -75,6 +80,7 @@ class MessageSerializer(serializers.ModelSerializer):
     """
     sender = UserSummarySerializer(read_only=True)
     sender_id = serializers.UUIDField(write_only=True)
+    message_body = serializers.CharField(required=True, allow_blank=False)
     
     class Meta:
         model = Message
@@ -84,7 +90,6 @@ class MessageSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'sent_at', 'sender']
         extra_kwargs = {
-            'message_body': {'required': True},
             'conversation': {'required': True}
         }
     
@@ -94,6 +99,12 @@ class MessageSerializer(serializers.ModelSerializer):
             User.objects.get(id=value)
         except User.DoesNotExist:
             raise serializers.ValidationError("User with this ID does not exist.")
+        return value
+    
+    def validate_message_body(self, value):
+        """Validate that message body is not empty."""
+        if not value.strip():
+            raise serializers.ValidationError("Message body cannot be empty.")
         return value
     
     def create(self, validated_data):
@@ -233,14 +244,20 @@ class MessageCreateSerializer(serializers.ModelSerializer):
     Simplified serializer for message creation without nested data.
     """
     sender_id = serializers.UUIDField(write_only=True)
+    message_body = serializers.CharField(required=True, allow_blank=False)
     
     class Meta:
         model = Message
         fields = ['sender_id', 'conversation', 'message_body']
         extra_kwargs = {
-            'message_body': {'required': True},
             'conversation': {'required': True}
         }
+    
+    def validate_message_body(self, value):
+        """Validate that message body is not empty."""
+        if not value.strip():
+            raise serializers.ValidationError("Message body cannot be empty.")
+        return value
     
     def validate(self, data):
         """Validate that the sender is a participant in the conversation."""
