@@ -10,6 +10,7 @@ This project implements a messaging system with the following features:
 - Conversation management between multiple users
 - Message sending and retrieval within conversations
 - RESTful API endpoints for all operations
+- Nested routing for conversation messages
 
 ## Project Structure
 
@@ -60,7 +61,7 @@ messaging_app/
 1. **Install Dependencies**
 
    ```bash
-   pip install django djangorestframework
+   pip install django djangorestframework drf-nested-routers
    ```
 
 2. **Run Migrations**
@@ -90,6 +91,58 @@ The application provides RESTful API endpoints for:
 - Conversation management
 - Message sending and retrieval
 - Authentication and authorization
+
+### Core Endpoints
+- `GET/POST /api/users/` - User management
+- `GET/POST /api/conversations/` - Conversation management
+- `GET/POST /api/messages/` - Message management
+
+### Nested Endpoints
+- `GET/POST /api/conversations/{id}/messages/` - Messages within a conversation
+- `GET /api/conversations/{id}/messages/my_messages/` - User's messages in conversation
+- `GET /api/conversations/{id}/messages/search/?q=query` - Search messages in conversation
+
+### Custom Actions
+- `POST /api/conversations/{id}/add_participant/` - Add participant
+- `POST /api/conversations/{id}/remove_participant/` - Remove participant
+- `GET /api/conversations/{id}/participants/` - List participants
+- `POST /api/messages/send_message/` - Send message
+- `GET /api/messages/my_messages/` - User's messages
+- `GET /api/messages/search/?q=query` - Search messages
+
+### Authentication Endpoints
+- `/api-auth/login/` - REST framework login
+- `/api-auth/logout/` - REST framework logout
+
+## URL Configuration
+
+### Main Project URLs (`messaging_app/urls.py`)
+```python
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('', include('chats.urls')),
+    path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
+]
+```
+
+### App URLs (`chats/urls.py`)
+```python
+# DefaultRouter for main endpoints
+router = DefaultRouter()
+router.register(r'users', UserViewSet, basename='user')
+router.register(r'conversations', ConversationViewSet, basename='conversation')
+router.register(r'messages', MessageViewSet, basename='message')
+
+# NestedDefaultRouter for conversation messages
+conversations_router = routers.NestedDefaultRouter(router, r'conversations', lookup='conversation')
+conversations_router.register(r'messages', MessageViewSet, basename='conversation-messages')
+
+urlpatterns = [
+    path('api/', include(router.urls)),
+    path('api/', include(conversations_router.urls)),
+    path('api/', include('rest_framework.urls')),
+]
+```
 
 ## Database Schema
 
@@ -122,9 +175,11 @@ The application provides RESTful API endpoints for:
 - **UUID Primary Keys**: Enhanced security and scalability
 - **Role-Based Access**: Different user roles with appropriate permissions
 - **Many-to-Many Relationships**: Flexible conversation participation
+- **Nested Routing**: Messages within conversations using NestedDefaultRouter
 - **Database Indexing**: Optimized queries for performance
 - **Admin Interface**: Full Django admin integration
 - **REST API**: Ready for frontend integration
+- **Authentication**: Session and Basic authentication support
 
 ## Development
 
@@ -135,4 +190,5 @@ This project follows Django best practices:
 - Proper model relationships
 - Database constraints and indexing
 - Admin interface configuration
-- REST framework integration 
+- REST framework integration
+- Nested routing for complex relationships 

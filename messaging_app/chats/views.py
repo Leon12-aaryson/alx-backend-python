@@ -3,14 +3,15 @@
 Views for the messaging application.
 
 This module contains Django REST Framework viewsets for handling
-conversations and messages with proper API endpoints.
+conversations and messages with proper API endpoints and filtering.
 """
 
-from rest_framework import viewsets, status, permissions
+from rest_framework import viewsets, status, permissions, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from django.db.models import Q, Prefetch
+from django_filters.rest_framework import DjangoFilterBackend
 from .models import User, Conversation, Message
 from .serializers import (
     UserSerializer,
@@ -32,6 +33,11 @@ class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['role', 'is_active']
+    search_fields = ['email', 'first_name', 'last_name']
+    ordering_fields = ['created_at', 'email', 'first_name', 'last_name']
+    ordering = ['-created_at']
     
     def get_queryset(self):
         """Return users based on current user's permissions."""
@@ -54,6 +60,11 @@ class ConversationViewSet(viewsets.ModelViewSet):
     and managing conversation participants.
     """
     permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['created_at']
+    search_fields = ['participants__email', 'participants__first_name', 'participants__last_name']
+    ordering_fields = ['created_at', 'participant_count', 'message_count']
+    ordering = ['-created_at']
     
     def get_queryset(self):
         """Return conversations where the current user is a participant."""
@@ -188,6 +199,11 @@ class MessageViewSet(viewsets.ModelViewSet):
     and managing message content.
     """
     permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['sender', 'conversation', 'sent_at']
+    search_fields = ['message_body', 'sender__email', 'sender__first_name', 'sender__last_name']
+    ordering_fields = ['sent_at', 'sender__first_name', 'sender__last_name']
+    ordering = ['-sent_at']
     
     def get_queryset(self):
         """Return messages from conversations where user is a participant."""
