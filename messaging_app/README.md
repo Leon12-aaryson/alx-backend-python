@@ -99,15 +99,26 @@ The application provides RESTful API endpoints for:
 - `GET/POST /api/conversations/` - Conversation management
 - `GET/POST /api/messages/` - Message management
 
-### Nested Endpoints
-- `GET/POST /api/conversations/{id}/messages/` - Messages within a conversation
-- `GET /api/conversations/{id}/messages/my_messages/` - User's messages in conversation
-- `GET /api/conversations/{id}/messages/search/?q=query` - Search messages in conversation
+### Conversation Endpoints
+- `GET /api/conversations/` - List all conversations for the authenticated user
+- `POST /api/conversations/` - Create a new conversation
+- `GET /api/conversations/{id}/` - Get conversation details
+- `PUT/PATCH /api/conversations/{id}/` - Update conversation
+- `DELETE /api/conversations/{id}/` - Delete conversation
+- `GET /api/conversations/{id}/participant/` - Get conversation participant
+
+### Message Endpoints
+- `GET /api/messages/` - List all messages sent by the authenticated user
+- `POST /api/messages/` - Create a new message
+- `GET /api/messages/{id}/` - Get message details
+- `PUT/PATCH /api/messages/{id}/` - Update message (only by sender)
+- `DELETE /api/messages/{id}/` - Delete message (only by sender)
+- `POST /api/messages/send_message/` - Send a message
+- `GET /api/messages/my_messages/` - Get user's messages
+- `GET /api/messages/search/?q=query` - Search messages by content
 
 ### Custom Actions
-- `POST /api/conversations/{id}/add_participant/` - Add participant
-- `POST /api/conversations/{id}/remove_participant/` - Remove participant
-- `GET /api/conversations/{id}/participants/` - List participants
+- `GET /api/conversations/{id}/participant/` - Get conversation participant
 - `POST /api/messages/send_message/` - Send message
 - `GET /api/messages/my_messages/` - User's messages
 - `GET /api/messages/search/?q=query` - Search messages
@@ -130,7 +141,7 @@ All list endpoints support filtering, searching, and ordering:
 - **Order**: `?ordering=-created_at`
 
 #### Messages
-- **Filter**: `?sender=uuid&conversation=uuid&sent_at=2024-01-01`
+- **Filter**: `?sender_id=uuid&sent_at=2024-01-01`
 - **Search**: `?search=hello`
 - **Order**: `?ordering=-sent_at`
 
@@ -153,13 +164,8 @@ router.register(r'users', UserViewSet, basename='user')
 router.register(r'conversations', ConversationViewSet, basename='conversation')
 router.register(r'messages', MessageViewSet, basename='message')
 
-# NestedDefaultRouter for conversation messages
-conversations_router = routers.NestedDefaultRouter(router, r'conversations', lookup='conversation')
-conversations_router.register(r'messages', MessageViewSet, basename='conversation-messages')
-
 urlpatterns = [
     path('', include(router.urls)),
-    path('', include(conversations_router.urls)),
     path('', include('rest_framework.urls')),
 ]
 ```
