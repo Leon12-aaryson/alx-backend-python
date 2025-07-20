@@ -11,6 +11,7 @@ This project implements a messaging system with the following features:
 - Message sending and retrieval within conversations
 - RESTful API endpoints for all operations
 - Nested routing for conversation messages
+- Advanced filtering, searching, and ordering capabilities
 
 ## Project Structure
 
@@ -26,7 +27,7 @@ messaging_app/
 │   ├── __init__.py
 │   ├── admin.py           # Admin interface configuration
 │   ├── models.py          # Data models
-│   ├── views.py           # API views
+│   ├── views.py           # API views with filtering
 │   ├── serializers.py     # DRF serializers
 │   └── urls.py            # App URL configuration
 ├── manage.py              # Django management script
@@ -61,7 +62,7 @@ messaging_app/
 1. **Install Dependencies**
 
    ```bash
-   pip install django djangorestframework drf-nested-routers
+   pip install django djangorestframework drf-nested-routers django-filter
    ```
 
 2. **Run Migrations**
@@ -91,6 +92,7 @@ The application provides RESTful API endpoints for:
 - Conversation management
 - Message sending and retrieval
 - Authentication and authorization
+- Advanced filtering and searching
 
 ### Core Endpoints
 - `GET/POST /api/users/` - User management
@@ -114,13 +116,31 @@ The application provides RESTful API endpoints for:
 - `/api-auth/login/` - REST framework login
 - `/api-auth/logout/` - REST framework logout
 
+### Filtering and Search
+All list endpoints support filtering, searching, and ordering:
+
+#### Users
+- **Filter**: `?role=guest&is_active=true`
+- **Search**: `?search=john`
+- **Order**: `?ordering=-created_at,email`
+
+#### Conversations
+- **Filter**: `?created_at=2024-01-01`
+- **Search**: `?search=john@example.com`
+- **Order**: `?ordering=-created_at`
+
+#### Messages
+- **Filter**: `?sender=uuid&conversation=uuid&sent_at=2024-01-01`
+- **Search**: `?search=hello`
+- **Order**: `?ordering=-sent_at`
+
 ## URL Configuration
 
 ### Main Project URLs (`messaging_app/urls.py`)
 ```python
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('chats.urls')),
+    path('api/', include('chats.urls')),
     path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
 ]
 ```
@@ -138,9 +158,9 @@ conversations_router = routers.NestedDefaultRouter(router, r'conversations', loo
 conversations_router.register(r'messages', MessageViewSet, basename='conversation-messages')
 
 urlpatterns = [
-    path('api/', include(router.urls)),
-    path('api/', include(conversations_router.urls)),
-    path('api/', include('rest_framework.urls')),
+    path('', include(router.urls)),
+    path('', include(conversations_router.urls)),
+    path('', include('rest_framework.urls')),
 ]
 ```
 
@@ -176,6 +196,9 @@ urlpatterns = [
 - **Role-Based Access**: Different user roles with appropriate permissions
 - **Many-to-Many Relationships**: Flexible conversation participation
 - **Nested Routing**: Messages within conversations using NestedDefaultRouter
+- **Advanced Filtering**: Django-filter integration for complex queries
+- **Search Functionality**: Full-text search across multiple fields
+- **Ordering**: Flexible sorting by any field
 - **Database Indexing**: Optimized queries for performance
 - **Admin Interface**: Full Django admin integration
 - **REST API**: Ready for frontend integration
@@ -191,4 +214,5 @@ This project follows Django best practices:
 - Database constraints and indexing
 - Admin interface configuration
 - REST framework integration
-- Nested routing for complex relationships 
+- Nested routing for complex relationships
+- Advanced filtering and search capabilities 

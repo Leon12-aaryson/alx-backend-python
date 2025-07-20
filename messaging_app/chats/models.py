@@ -23,10 +23,14 @@ class User(AbstractUser):
     
     # Override the default id field to use UUID
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     
     # Override username to use email
     username = None
     email = models.EmailField(unique=True, null=False, blank=False)
+    
+    # Password field (inherited from AbstractUser but explicitly defined)
+    password = models.CharField(max_length=128, verbose_name='password')
     
     # Additional fields
     first_name = models.CharField(max_length=150, null=False, blank=False)
@@ -59,6 +63,7 @@ class User(AbstractUser):
         db_table = 'user'
         indexes = [
             models.Index(fields=['email']),
+            models.Index(fields=['user_id']),
         ]
     
     def __str__(self):
@@ -72,6 +77,7 @@ class Conversation(models.Model):
     This model represents a conversation between multiple users.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    conversation_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     participants = models.ManyToManyField(
         User,
         related_name='conversations',
@@ -83,6 +89,7 @@ class Conversation(models.Model):
         db_table = 'conversation'
         indexes = [
             models.Index(fields=['created_at']),
+            models.Index(fields=['conversation_id']),
         ]
     
     def __str__(self):
@@ -116,6 +123,7 @@ class Message(models.Model):
     This model represents individual messages within a conversation.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    message_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     sender = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -134,6 +142,7 @@ class Message(models.Model):
         indexes = [
             models.Index(fields=['sent_at']),
             models.Index(fields=['conversation', 'sent_at']),
+            models.Index(fields=['message_id']),
         ]
         ordering = ['sent_at']
     
