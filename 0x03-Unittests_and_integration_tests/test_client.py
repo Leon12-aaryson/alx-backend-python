@@ -4,7 +4,7 @@ Unit tests for client module.
 """
 
 import unittest
-from unittest.mock import patch, Mock
+from unittest.mock import patch, Mock, PropertyMock
 from parameterized import parameterized
 from client import GithubOrgClient
 
@@ -29,14 +29,18 @@ class TestGithubOrgClient(unittest.TestCase):
         self.assertEqual(result, {"payload": True})
 
     def test_public_repos_url(self):
-        """Test that GithubOrgClient._public_repos_url returns the expected value."""
-        with patch('client.GithubOrgClient.org', new_callable=Mock) as mock_org:
-            mock_org.return_value = {"repos_url": "https://api.github.com/orgs/google/repos"}
-            
+        """Test that GithubOrgClient._public_repos_url returns expected."""
+        with patch('client.GithubOrgClient.org',
+                   new_callable=PropertyMock) as mock_org:
+            mock_org.return_value = {
+                "repos_url": "https://api.github.com/orgs/google/repos"
+            }
+
             client = GithubOrgClient("google")
             result = client._public_repos_url
-            
-            self.assertEqual(result, "https://api.github.com/orgs/google/repos")
+
+            expected = "https://api.github.com/orgs/google/repos"
+            self.assertEqual(result, expected)
 
 
 if __name__ == '__main__':
