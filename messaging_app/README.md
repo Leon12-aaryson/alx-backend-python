@@ -167,8 +167,9 @@ urlpatterns = [
 ## Database Schema
 
 ### User Table
-
 - `id` (UUID, Primary Key)
+- `user_id` (UUID, Unique, NOT NULL)
+- `password` (VARCHAR(128), NOT NULL)
 - `first_name` (VARCHAR, NOT NULL)
 - `last_name` (VARCHAR, NOT NULL)
 - `email` (VARCHAR, UNIQUE, NOT NULL)
@@ -177,13 +178,13 @@ urlpatterns = [
 - `created_at` (TIMESTAMP, DEFAULT CURRENT_TIMESTAMP)
 
 ### Conversation Table
-
 - `id` (UUID, Primary Key)
+- `conversation_id` (UUID, Unique, NOT NULL)
 - `created_at` (TIMESTAMP, DEFAULT CURRENT_TIMESTAMP)
 
 ### Message Table
-
 - `id` (UUID, Primary Key)
+- `message_id` (UUID, Unique, NOT NULL)
 - `sender_id` (Foreign Key, references User)
 - `conversation_id` (Foreign Key, references Conversation)
 - `message_body` (TEXT, NOT NULL)
@@ -193,6 +194,8 @@ urlpatterns = [
 
 - **Custom User Model**: Extends Django's AbstractUser with additional fields
 - **UUID Primary Keys**: Enhanced security and scalability
+- **Additional ID Fields**: Separate user_id, conversation_id, and message_id fields for better identification
+- **Password Management**: Explicit password field with proper hashing
 - **Role-Based Access**: Different user roles with appropriate permissions
 - **Many-to-Many Relationships**: Flexible conversation participation
 - **Nested Routing**: Messages within conversations using NestedDefaultRouter
