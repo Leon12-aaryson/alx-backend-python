@@ -35,7 +35,7 @@ class UserViewSet(viewsets.ModelViewSet):
     """
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = [IsOwnerOrReadOnly]
+    permission_classes = [permissions.IsAuthenticated, IsOwnerOrReadOnly]
     pagination_class = UserPagination
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['role', 'is_active']
@@ -63,7 +63,7 @@ class ConversationViewSet(viewsets.ModelViewSet):
     Provides endpoints for listing conversations, creating new ones,
     and managing conversation participants with nested message relationships.
     """
-    permission_classes = [IsParticipantOfConversation]
+    permission_classes = [permissions.IsAuthenticated, IsParticipantOfConversation]
     pagination_class = ConversationPagination
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_class = ConversationFilter
@@ -116,7 +116,7 @@ class MessageViewSet(viewsets.ModelViewSet):
     Provides endpoints for listing messages, sending new messages,
     and managing message content with support for nested routing.
     """
-    permission_classes = [IsParticipantOfConversation, IsMessageSender]
+    permission_classes = [permissions.IsAuthenticated, IsParticipantOfConversation, IsMessageSender]
     pagination_class = MessagePagination
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_class = MessageFilter
