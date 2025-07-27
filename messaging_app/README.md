@@ -1,532 +1,184 @@
-# Messaging Application
+# Messaging App API Testing
 
-A Django-based messaging application with REST API support.
+This directory contains the complete API testing setup for the Django messaging application.
 
-## Project Overview
+## 📁 Files
 
-This project implements a messaging system with the following features:
+- **`post_man-Collections`**: Complete Postman collection with all API endpoints
+- **`test_api.py`**: Automated Python test script for quick API validation
+- **`README.md`**: This file with testing instructions
 
-- User management with role-based access (guest, host, admin)
-- Conversation management between multiple users
-- Message sending and retrieval within conversations
-- RESTful API endpoints for all operations
-- Nested routing for conversation messages
-- Advanced filtering, searching, and ordering capabilities
+## 🚀 Quick Start
 
-## Project Structure
+### Option 1: Postman Testing (Recommended)
 
-```text
-messaging_app/
-├── messaging_app/          # Main project settings
-│   ├── __init__.py
-│   ├── settings.py         # Django settings
-│   ├── urls.py            # Main URL configuration
-│   ├── wsgi.py            # WSGI configuration
-│   └── asgi.py            # ASGI configuration
-├── chats/                 # Messaging app
-│   ├── __init__.py
-│   ├── admin.py           # Admin interface configuration
-│   ├── models.py          # Data models
-│   ├── views.py           # API views with filtering
-│   ├── serializers.py     # DRF serializers
-│   └── urls.py            # App URL configuration
-├── manage.py              # Django management script
-└── README.md              # This file
-```
+1. **Import Collection**:
+   - Open Postman
+   - Click "Import" button
+   - Select the `post_man-Collections` file
+   - The collection will be imported with all endpoints organized
 
-## Data Models
+2. **Set Up Environment**:
+   - Create a new environment in Postman
+   - Add these variables:
+     - `base_url`: `http://127.0.0.1:8000`
+     - `access_token`: (leave empty, will be filled after login)
+     - `refresh_token`: (leave empty, will be filled after login)
+     - `user_id`: (leave empty, will be filled after login)
+     - `conversation_id`: (leave empty, will be filled after creating conversation)
+     - `message_id`: (leave empty, will be filled after creating message)
+     - `participant_user_id`: (leave empty, will be filled after creating second user)
 
-### User Model
+3. **Start Testing**:
+   - Start the Django server: `python manage.py runserver 8000`
+   - Follow the collection folders in order:
+     1. **Authentication** - Register and login users
+     2. **Users** - Test user management
+     3. **Conversations** - Test conversation creation and management
+     4. **Messages** - Test message sending and retrieval
+     5. **Testing Scenarios** - Test security and edge cases
 
-- Extends Django's AbstractUser
-- Uses UUID as primary key
-- Email-based authentication
-- Role-based access control (guest, host, admin)
-- Phone number validation
+### Option 2: Automated Testing
 
-### Conversation Model
-
-- Tracks conversations between multiple users
-- Many-to-many relationship with users through ConversationParticipant
-- UUID primary key for security
-
-### Message Model
-
-- Contains message content and metadata
-- Links to sender (User) and conversation
-- Timestamped for chronological ordering
-- Indexed for performance
-
-## Setup Instructions
-
-1. **Install Dependencies**
-
+1. **Start Server**:
    ```bash
-   pip install django djangorestframework drf-nested-routers django-filter
+   python manage.py runserver 8000
    ```
 
-2. **Run Migrations**
-
+2. **Run Tests**:
    ```bash
-   python manage.py makemigrations
-   python manage.py migrate
+   python test_api.py
    ```
 
-3. **Create Superuser**
+3. **Review Results**:
+   - Check the test output for any failures
+   - All tests should pass for a fully working API
 
-   ```bash
-   python manage.py createsuperuser
-   ```
+## 🧪 Testing Scenarios
 
-4. **Run Development Server**
+### Authentication Flow
+1. Register a new user → Get JWT tokens
+2. Login with credentials → Get fresh tokens
+3. Use access token for API calls
+4. Refresh token when expired
+5. Logout to blacklist refresh token
 
-   ```bash
-   python manage.py runserver
-   ```
+### Conversation Testing
+1. Create conversation between two users
+2. List user's conversations
+3. Get conversation details
+4. Send messages to conversation
+5. Retrieve conversation messages
 
-## API Endpoints
+### Message Testing
+1. Send standalone messages
+2. Send messages to conversations
+3. List user's messages with pagination
+4. Filter messages by time and content
+5. Search messages by content
+6. Update and delete messages
 
-The application provides RESTful API endpoints for:
+### Security Testing
+1. Test unauthorized access (should return 401)
+2. Test invalid tokens (should return 401)
+3. Test access to other user's data (should return 403)
+4. Verify user isolation and permissions
 
-- User management (CRUD operations)
-- Conversation management
-- Message sending and retrieval
-- Authentication and authorization
-- Advanced filtering and searching
+## 📊 Expected Results
 
-### Core Endpoints
-- `GET/POST /api/users/` - User management
-- `GET/POST /api/conversations/` - Conversation management
-- `GET/POST /api/messages/` - Message management
+### Successful Responses
+- **Registration/Login**: 201/200 with user data and JWT tokens
+- **Protected Endpoints**: 200 with requested data
+- **Pagination**: JSON with count, next, previous, and results
+- **Filtering**: Filtered results based on query parameters
 
-### Nested Endpoints
-- `GET/POST /api/conversations/{id}/messages/` - Messages within a conversation
-- `GET /api/conversations/{id}/messages/my_messages/` - User's messages in conversation
-- `GET /api/conversations/{id}/messages/search/?q=query` - Search messages in conversation
-- `POST /api/conversations/{id}/messages/send_message/` - Send message to conversation
+### Error Responses
+- **401 Unauthorized**: Missing or invalid authentication
+- **403 Forbidden**: Insufficient permissions
+- **400 Bad Request**: Invalid request data
+- **404 Not Found**: Resource doesn't exist
 
-### Conversation Endpoints
-- `GET /api/conversations/` - List all conversations for the authenticated user
-- `POST /api/conversations/` - Create a new conversation
-- `GET /api/conversations/{id}/` - Get conversation details
-- `PUT/PATCH /api/conversations/{id}/` - Update conversation
-- `DELETE /api/conversations/{id}/` - Delete conversation
-- `GET /api/conversations/{id}/participant/` - Get conversation participant
+## 🔧 Troubleshooting
 
-### Message Endpoints
-- `GET /api/messages/` - List all messages sent by the authenticated user
-- `POST /api/messages/` - Create a new message
-- `GET /api/messages/{id}/` - Get message details
-- `PUT/PATCH /api/messages/{id}/` - Update message (only by sender)
-- `DELETE /api/messages/{id}/` - Delete message (only by sender)
-- `POST /api/messages/send_message/` - Send a message
-- `GET /api/messages/my_messages/` - Get user's messages
-- `GET /api/messages/search/?q=query` - Search messages by content
+### Common Issues
 
-### Custom Actions
-- `GET /api/conversations/{id}/participant/` - Get conversation participant
-- `POST /api/messages/send_message/` - Send message
-- `GET /api/messages/my_messages/` - User's messages
-- `GET /api/messages/search/?q=query` - Search messages
+1. **"Connection refused"**
+   - Ensure Django server is running on port 8000
+   - Check if the server started without errors
 
-### Authentication Endpoints
-- `/api-auth/login/` - REST framework login
-- `/api-auth/logout/` - REST framework logout
+2. **"401 Unauthorized"**
+   - Verify access token is valid and not expired
+   - Check Authorization header format: `Bearer <token>`
+   - Refresh token or login again if needed
 
-### Filtering and Search
-All list endpoints support filtering, searching, and ordering:
+3. **"403 Forbidden"**
+   - Check user permissions and role
+   - Ensure user has appropriate access rights
+   - Verify user is trying to access their own data
 
-#### Users
-- **Filter**: `?role=guest&is_active=true`
-- **Search**: `?search=john`
-- **Order**: `?ordering=-created_at,email`
+4. **"400 Bad Request"**
+   - Check request body format and required fields
+   - Verify JSON syntax is correct
+   - Ensure all required parameters are provided
 
-#### Conversations
-- **Filter**: `?created_at=2024-01-01`
-- **Search**: `?search=john@example.com`
-- **Order**: `?ordering=-created_at`
+### Environment Setup
 
-#### Messages
-- **Filter**: `?sender_id=uuid&sent_at=2024-01-01`
-- **Search**: `?search=hello`
-- **Order**: `?ordering=-sent_at`
+If you encounter Python environment issues:
+```bash
+# Create virtual environment
+python -m venv .venv
 
-## URL Configuration
+# Activate virtual environment
+source .venv/bin/activate  # On macOS/Linux
+# or
+.venv\Scripts\activate     # On Windows
 
-### Main Project URLs (`messaging_app/urls.py`)
-```python
-urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('api/', include('chats.urls')),
-    path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
-]
+# Install dependencies
+pip install -r requirements.txt
 ```
 
-### App URLs (`chats/urls.py`)
-```python
-# DefaultRouter for main endpoints
-router = routers.DefaultRouter()
-router.register(r'users', UserViewSet, basename='user')
-router.register(r'conversations', ConversationViewSet, basename='conversation')
-router.register(r'messages', MessageViewSet, basename='message')
+## 📝 Testing Checklist
 
-# NestedDefaultRouter for conversation messages
-conversations_router = nested_routers.NestedDefaultRouter(router, r'conversations', lookup='conversation')
-conversations_router.register(r'messages', MessageViewSet, basename='conversation-messages')
+- [ ] User registration works
+- [ ] User login works
+- [ ] JWT tokens are generated correctly
+- [ ] Protected endpoints require authentication
+- [ ] Users can only access their own conversations
+- [ ] Users can only modify their own messages
+- [ ] Pagination works correctly
+- [ ] Filtering works correctly
+- [ ] Search functionality works
+- [ ] Unauthorized access is properly blocked
+- [ ] Invalid tokens are rejected
+- [ ] Token refresh works
+- [ ] Logout works
 
-urlpatterns = [
-    path('', include(router.urls)),
-    path('', include(conversations_router.urls)),
-    path('', include('rest_framework.urls')),
-]
-```
+## 🎯 Advanced Testing
 
-## Database Schema
+### Load Testing
+- Create multiple users
+- Send many messages
+- Test pagination with large datasets
+- Test concurrent access
 
-### User Table
-- `id` (UUID, Primary Key)
-- `user_id` (UUID, Unique, NOT NULL)
-- `password` (VARCHAR(128), NOT NULL)
-- `first_name` (VARCHAR, NOT NULL)
-- `last_name` (VARCHAR, NOT NULL)
-- `email` (VARCHAR, UNIQUE, NOT NULL)
-- `phone_number` (VARCHAR, NULL)
-- `role` (ENUM: 'guest', 'host', 'admin', NOT NULL)
-- `created_at` (TIMESTAMP, DEFAULT CURRENT_TIMESTAMP)
+### Edge Cases
+- Test with very long message content
+- Test with special characters in messages
+- Test with empty or null values
+- Test with malformed JSON
 
-### Conversation Table
-- `id` (UUID, Primary Key)
-- `conversation_id` (UUID, Unique, NOT NULL)
-- `created_at` (TIMESTAMP, DEFAULT CURRENT_TIMESTAMP)
+### Security Testing
+- Test SQL injection attempts
+- Test XSS attempts
+- Test CSRF protection
+- Test rate limiting (if implemented)
 
-### Message Table
-- `id` (UUID, Primary Key)
-- `message_id` (UUID, Unique, NOT NULL)
-- `sender_id` (Foreign Key, references User)
-- `conversation_id` (Foreign Key, references Conversation)
-- `message_body` (TEXT, NOT NULL)
-- `sent_at` (TIMESTAMP, DEFAULT CURRENT_TIMESTAMP)
+## 📞 Support
 
-## Features
+If you encounter issues:
+1. Check the Django server logs for errors
+2. Verify all dependencies are installed
+3. Ensure the database is properly migrated
+4. Check that all required environment variables are set
 
-- **Custom User Model**: Extends Django's AbstractUser with additional fields
-- **UUID Primary Keys**: Enhanced security and scalability
-- **Additional ID Fields**: Separate user_id, conversation_id, and message_id fields for better identification
-- **Password Management**: Explicit password field with proper hashing
-- **Role-Based Access**: Different user roles with appropriate permissions
-- **Many-to-Many Relationships**: Flexible conversation participation
-- **Nested Routing**: Messages within conversations using NestedDefaultRouter
-- **Advanced Filtering**: Django-filter integration for complex queries
-- **Search Functionality**: Full-text search across multiple fields
-- **Ordering**: Flexible sorting by any field
-- **Database Indexing**: Optimized queries for performance
-- **Admin Interface**: Full Django admin integration
-- **REST API**: Ready for frontend integration
-- **Authentication**: Session and Basic authentication support
-
-## Development
-
-This project follows Django best practices:
-
-- Modular app structure
-- Custom user model
-- Proper model relationships
-- Database constraints and indexing
-- Admin interface configuration
-- REST framework integration
-- Nested routing for complex relationships
-- Advanced filtering and search capabilities
-
-## Implementation Summary
-
-### Viewsets Implementation
-
-The application uses Django REST Framework viewsets to implement the API endpoints:
-
-#### **ConversationViewSet** (`chats/views.py`)
-```python
-class ConversationViewSet(viewsets.ModelViewSet):
-    permission_classes = [permissions.IsAuthenticated]
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    
-    def get_queryset(self):
-        """Return conversations where the current user is a participant."""
-        user = self.request.user
-        return Conversation.objects.filter(participants_id=user)
-    
-    def get_serializer_class(self):
-        """Return appropriate serializer based on action."""
-        if self.action == 'create':
-            return ConversationCreateSerializer
-        return ConversationSerializer
-    
-    def perform_create(self, serializer):
-        """Create conversation with current user as participant."""
-        return serializer.save()
-    
-    @action(detail=True, methods=['get'])
-    def participant(self, request, pk=None):
-        """Get participant information in a conversation."""
-        conversation = self.get_object()
-        participant = conversation.participants_id
-        serializer = UserSerializer(participant)
-        return Response(serializer.data)
-```
-
-#### **MessageViewSet** (`chats/views.py`)
-```python
-class MessageViewSet(viewsets.ModelViewSet):
-    permission_classes = [permissions.IsAuthenticated]
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    
-    def get_queryset(self):
-        """Return messages sent by the current user."""
-        user = self.request.user
-        return Message.objects.filter(sender_id=user)
-    
-    def get_serializer_class(self):
-        """Return appropriate serializer based on action."""
-        if self.action in ['create', 'send_message']:
-            return MessageCreateSerializer
-        return MessageSerializer
-    
-    def perform_create(self, serializer):
-        """Create message with current user as sender."""
-        serializer.save(sender_id=self.request.user)
-    
-    @action(detail=False, methods=['post'])
-    def send_message(self, request):
-        """Send a message."""
-        serializer = self.get_serializer(data=request.data)
-        if serializer.is_valid():
-            message = serializer.save(sender_id=request.user)
-            response_serializer = MessageSerializer(message)
-            return Response(response_serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-```
-
-### URL Configuration
-
-The endpoints are configured using `routers.DefaultRouter()`:
-
-```python
-# chats/urls.py
-from rest_framework import routers
-
-router = routers.DefaultRouter()
-router.register(r'conversations', ConversationViewSet, basename='conversation')
-router.register(r'messages', MessageViewSet, basename='message')
-
-urlpatterns = [
-    path('', include(router.urls)),
-    path('', include('rest_framework.urls')),
-]
-```
-
-### Endpoint Functionality
-
-#### **Creating Conversations**
-- **Endpoint**: `POST /api/conversations/`
-- **Method**: `ConversationViewSet.create()`
-- **Serializer**: `ConversationCreateSerializer`
-- **Functionality**: Creates a new conversation with the current user as participant
-
-#### **Sending Messages**
-- **Endpoint**: `POST /api/messages/send_message/`
-- **Method**: `MessageViewSet.send_message()`
-- **Serializer**: `MessageCreateSerializer`
-- **Functionality**: Sends a message with the current user as sender
-
-#### **Listing Conversations**
-- **Endpoint**: `GET /api/conversations/`
-- **Method**: `ConversationViewSet.list()`
-- **Serializer**: `ConversationSerializer`
-- **Functionality**: Lists all conversations where the user is a participant
-
-#### **Listing Messages**
-- **Endpoint**: `GET /api/messages/`
-- **Method**: `MessageViewSet.list()`
-- **Serializer**: `MessageSerializer`
-- **Functionality**: Lists all messages sent by the current user 
-
-## NestedDefaultRouter Implementation
-
-### Overview
-The application uses `NestedDefaultRouter` from `drf-nested-routers` to create nested API endpoints for conversations and their messages. This provides a logical hierarchy where messages are nested under conversations.
-
-### Implementation Details
-
-#### **URL Configuration**
-```python
-# chats/urls.py
-from rest_framework import routers
-from rest_framework_nested import routers as nested_routers
-
-# Main router for top-level endpoints
-router = routers.DefaultRouter()
-router.register(r'conversations', ConversationViewSet, basename='conversation')
-router.register(r'messages', MessageViewSet, basename='message')
-
-# Nested router for conversation messages
-conversations_router = nested_routers.NestedDefaultRouter(router, r'conversations', lookup='conversation')
-conversations_router.register(r'messages', MessageViewSet, basename='conversation-messages')
-```
-
-#### **ViewSet Support**
-The `MessageViewSet` is designed to work in both standalone and nested contexts:
-
-```python
-def get_queryset(self):
-    """Return messages based on context (nested or standalone)."""
-    user = self.request.user
-    conversation_pk = self.kwargs.get('conversation_pk')
-    
-    if conversation_pk:
-        # Nested route: return messages for specific conversation
-        return Message.objects.filter(
-            sender_id=user,
-            conversation_id=conversation_pk
-        ).select_related('sender_id').order_by('-sent_at')
-    else:
-        # Standalone route: return all messages sent by user
-        return Message.objects.filter(
-            sender_id=user
-        ).select_related('sender_id').order_by('-sent_at')
-```
-
-### Generated Endpoints
-
-#### **Standalone Message Endpoints**
-- `GET /api/messages/` - List all user messages
-- `POST /api/messages/` - Create new message
-- `GET /api/messages/{id}/` - Get message details
-- `PUT/PATCH /api/messages/{id}/` - Update message
-- `DELETE /api/messages/{id}/` - Delete message
-- `POST /api/messages/send_message/` - Send message
-- `GET /api/messages/my_messages/` - User's messages
-- `GET /api/messages/search/?q=query` - Search messages
-
-#### **Nested Conversation Message Endpoints**
-- `GET /api/conversations/{id}/messages/` - List messages in conversation
-- `POST /api/conversations/{id}/messages/` - Create message in conversation
-- `GET /api/conversations/{id}/messages/{message_id}/` - Get message in conversation
-- `PUT/PATCH /api/conversations/{id}/messages/{message_id}/` - Update message in conversation
-- `DELETE /api/conversations/{id}/messages/{message_id}/` - Delete message in conversation
-- `POST /api/conversations/{id}/messages/send_message/` - Send message to conversation
-- `GET /api/conversations/{id}/messages/my_messages/` - User's messages in conversation
-- `GET /api/conversations/{id}/messages/search/?q=query` - Search messages in conversation
-
-### Benefits
-
-1. **Logical Hierarchy**: Messages are properly nested under conversations
-2. **Clean URLs**: Intuitive URL structure like `/api/conversations/{id}/messages/`
-3. **Context Awareness**: Same ViewSet works in both standalone and nested contexts
-4. **Automatic Filtering**: Messages are automatically filtered by conversation in nested routes
-5. **Consistent API**: Same CRUD operations available in both contexts
-6. **Scalable Design**: Easy to add more nested resources in the future 
-
-## Nested Relationship Handling
-
-### Overview
-The application uses `SerializerMethodField()` to properly handle nested relationships, including messages within conversations. This provides a clean and efficient way to serialize related data without circular dependencies.
-
-### Implementation Details
-
-#### **SerializerMethodField Usage**
-The serializers use `SerializerMethodField()` to include nested data:
-
-```python
-class ConversationSerializer(serializers.ModelSerializer):
-    messages = serializers.SerializerMethodField()
-    message_count = serializers.SerializerMethodField()
-    
-    def get_messages(self, obj):
-        """Get messages for this conversation."""
-        messages = obj.messages.all().order_by('-sent_at')[:10]  # Limit to last 10 messages
-        return MessageSummarySerializer(messages, many=True).data
-    
-    def get_message_count(self, obj):
-        """Get the total number of messages in this conversation."""
-        return obj.messages.count()
-```
-
-#### **MessageSummarySerializer**
-A simplified message serializer for nested relationships:
-
-```python
-class MessageSummarySerializer(serializers.ModelSerializer):
-    """Simplified message serializer for nested relationships."""
-    sender_id = UserSummarySerializer(read_only=True, source='sender_id')
-    
-    class Meta:
-        model = Message
-        fields = ['message_id', 'sender_id', 'message_body', 'sent_at']
-        read_only_fields = ['message_id', 'sent_at', 'sender_id']
-```
-
-#### **ConversationDetailSerializer**
-Enhanced serializer for detailed conversation views:
-
-```python
-class ConversationDetailSerializer(ConversationSerializer):
-    """Detailed conversation serializer with full message content."""
-    messages = serializers.SerializerMethodField()
-    
-    def get_messages(self, obj):
-        """Get all messages for this conversation."""
-        messages = obj.messages.all().order_by('-sent_at')
-        return MessageSummarySerializer(messages, many=True).data
-```
-
-### Benefits
-
-1. **Circular Dependency Prevention**: Avoids circular imports and infinite recursion
-2. **Performance Optimization**: Limits message count in list views (last 10 messages)
-3. **Flexible Serialization**: Different levels of detail for different use cases
-4. **Efficient Queries**: Proper prefetching of related data
-5. **Clean API Response**: Structured nested data in JSON format
-
-### API Response Examples
-
-#### **Conversation List Response**
-```json
-{
-  "conversation_id": "uuid",
-  "participants_id": {
-    "user_id": "uuid",
-    "email": "user@example.com",
-    "first_name": "John",
-    "last_name": "Doe",
-    "role": "guest"
-  },
-  "messages": [
-    {
-      "message_id": "uuid",
-      "sender_id": {
-        "user_id": "uuid",
-        "email": "user@example.com",
-        "first_name": "John",
-        "last_name": "Doe",
-        "role": "guest"
-      },
-      "message_body": "Hello!",
-      "sent_at": "2024-01-01T12:00:00Z"
-    }
-  ],
-  "message_count": 5,
-  "created_at": "2024-01-01T10:00:00Z"
-}
-```
-
-#### **Conversation Detail Response**
-```json
-{
-  "conversation_id": "uuid",
-  "participants_id": {...},
-  "messages": [
-    // All messages in the conversation (no limit)
-  ],
-  "message_count": 25,
-  "created_at": "2024-01-01T10:00:00Z"
-}
-``` 
+The API testing setup is designed to thoroughly validate all aspects of the messaging application's functionality, security, and performance. 
