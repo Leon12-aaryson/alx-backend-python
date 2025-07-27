@@ -26,10 +26,10 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'user_id', 'email', 'first_name', 'last_name', 
+            'id', 'email', 'first_name', 'last_name', 
             'phone_number', 'role', 'created_at', 'is_active'
         ]
-        read_only_fields = ['user_id', 'created_at']
+        read_only_fields = ['id', 'created_at']
         extra_kwargs = {
             'password_hash': {'write_only': True},
         }
@@ -67,8 +67,8 @@ class UserSummarySerializer(serializers.ModelSerializer):
     
     class Meta:
         model = User
-        fields = ['user_id', 'email', 'first_name', 'last_name', 'role']
-        read_only_fields = ['user_id']
+        fields = ['id', 'email', 'first_name', 'last_name', 'role']
+        read_only_fields = ['id']
 
 
 class MessageSerializer(serializers.ModelSerializer):
@@ -93,7 +93,7 @@ class MessageSerializer(serializers.ModelSerializer):
     def validate_sender_id_input(self, value):
         """Validate that the sender_id corresponds to an existing user."""
         try:
-            User.objects.get(user_id=value)
+            User.objects.get(id=value)
         except User.DoesNotExist:
             raise serializers.ValidationError("User with this ID does not exist.")
         return value
@@ -107,7 +107,7 @@ class MessageSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         """Create a message with proper sender assignment."""
         sender_id = validated_data.pop('sender_id')
-        sender = User.objects.get(user_id=sender_id)
+        sender = User.objects.get(id=sender_id)
         message = Message.objects.create(sender_id=sender, **validated_data)
         return message
 
@@ -158,7 +158,7 @@ class ConversationSerializer(serializers.ModelSerializer):
     def validate_participant_id_input(self, value):
         """Validate that the participant_id corresponds to an existing user."""
         try:
-            User.objects.get(user_id=value)
+            User.objects.get(id=value)
         except User.DoesNotExist:
             raise serializers.ValidationError("User with this ID does not exist.")
         return value
@@ -166,7 +166,7 @@ class ConversationSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         """Create a conversation with participant assignment."""
         participant_id = validated_data.pop('participants_id')
-        participant = User.objects.get(user_id=participant_id)
+        participant = User.objects.get(id=participant_id)
         conversation = Conversation.objects.create(participants_id=participant, **validated_data)
         return conversation
 
@@ -187,7 +187,7 @@ class ConversationCreateSerializer(serializers.ModelSerializer):
     def validate_participant_id(self, value):
         """Validate that the participant ID corresponds to an existing user."""
         try:
-            User.objects.get(user_id=value)
+            User.objects.get(id=value)
         except User.DoesNotExist:
             raise serializers.ValidationError("User with this ID does not exist.")
         return value
@@ -195,7 +195,7 @@ class ConversationCreateSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         """Create a conversation and assign participant."""
         participant_id = validated_data.pop('participant_id')
-        participant = User.objects.get(user_id=participant_id)
+        participant = User.objects.get(id=participant_id)
         conversation = Conversation.objects.create(participants_id=participant, **validated_data)
         return conversation
 
@@ -238,7 +238,7 @@ class MessageCreateSerializer(serializers.ModelSerializer):
     def validate_sender_id(self, value):
         """Validate that the sender_id corresponds to an existing user."""
         try:
-            User.objects.get(user_id=value)
+            User.objects.get(id=value)
         except User.DoesNotExist:
             raise serializers.ValidationError("User with this ID does not exist.")
         return value
@@ -258,6 +258,6 @@ class MessageCreateSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         """Create a message with proper sender assignment."""
         sender_id = validated_data.pop('sender_id')
-        sender = User.objects.get(user_id=sender_id)
+        sender = User.objects.get(id=sender_id)
         message = Message.objects.create(sender_id=sender, **validated_data)
         return message 

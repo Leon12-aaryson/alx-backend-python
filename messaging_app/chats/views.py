@@ -21,6 +21,9 @@ from .serializers import (
     MessageSerializer,
     MessageCreateSerializer
 )
+from .permissions import IsParticipantOfConversation, IsMessageSender, IsOwnerOrReadOnly, IsAdminOrReadOnly
+from .filters import MessageFilter, ConversationFilter
+from .pagination import MessagePagination, ConversationPagination, UserPagination
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -32,7 +35,8 @@ class UserViewSet(viewsets.ModelViewSet):
     """
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsOwnerOrReadOnly]
+    pagination_class = UserPagination
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['role', 'is_active']
     search_fields = ['email', 'first_name', 'last_name']
@@ -43,7 +47,7 @@ class UserViewSet(viewsets.ModelViewSet):
         """Return users based on current user's permissions."""
         if self.request.user.is_staff:
             return User.objects.all()
-        return User.objects.filter(user_id=self.request.user.user_id)
+        return User.objects.filter(id=self.request.user.id)
     
     def get_serializer_class(self):
         """Return appropriate serializer based on action."""
@@ -59,9 +63,10 @@ class ConversationViewSet(viewsets.ModelViewSet):
     Provides endpoints for listing conversations, creating new ones,
     and managing conversation participants with nested message relationships.
     """
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsParticipantOfConversation]
+    pagination_class = ConversationPagination
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['created_at']
+    filterset_class = ConversationFilter
     search_fields = ['participants_id__email', 'participants_id__first_name', 'participants_id__last_name']
     ordering_fields = ['created_at']
     ordering = ['-created_at']
@@ -74,7 +79,7 @@ class ConversationViewSet(viewsets.ModelViewSet):
         ).prefetch_related(
             Prefetch(
                 'participants_id',
-                queryset=User.objects.only('user_id', 'email', 'first_name', 'last_name', 'role')
+                queryset=User.objects.only('id', 'email', 'first_name', 'last_name', 'role')
             ),
             Prefetch(
                 'messages',
@@ -111,9 +116,10 @@ class MessageViewSet(viewsets.ModelViewSet):
     Provides endpoints for listing messages, sending new messages,
     and managing message content with support for nested routing.
     """
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsParticipantOfConversation, IsMessageSender]
+    pagination_class = MessagePagination
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['sender_id', 'sent_at']
+    filterset_class = MessageFilter
     search_fields = ['message_body', 'sender_id__email', 'sender_id__first_name', 'sender_id__last_name']
     ordering_fields = ['sent_at', 'sender_id__first_name', 'sender_id__last_name']
     ordering = ['-sent_at']
