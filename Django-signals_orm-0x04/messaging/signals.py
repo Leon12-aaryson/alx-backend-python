@@ -77,13 +77,19 @@ def cleanup_user_data(sender, instance, **kwargs):
     This signal ensures that all messages, notifications, and message histories
     associated with the deleted user are properly cleaned up.
     """
-    # Note: Due to CASCADE delete, most of this will be handled automatically
-    # But we can add custom cleanup logic here if needed
+    # Explicitly delete all messages sent by the user
+    Message.objects.filter(sender=instance).delete()
     
-    print(f"User {instance.email} deleted. Cleaning up related data...")
+    # Explicitly delete all messages received by the user
+    Message.objects.filter(receiver=instance).delete()
     
-    # Additional cleanup can be added here if needed
-    # For example, logging the deletion, sending notifications to other users, etc.
+    # Explicitly delete all notifications for the user
+    Notification.objects.filter(user=instance).delete()
+    
+    # Explicitly delete all message histories where the user was the editor
+    MessageHistory.objects.filter(edited_by=instance).delete()
+    
+    print(f"User {instance.email} deleted. Cleaned up all related data.")
 
 
 @receiver(post_save, sender=Message)
