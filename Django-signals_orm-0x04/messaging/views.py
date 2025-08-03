@@ -52,6 +52,10 @@ class MessageViewSet(viewsets.ModelViewSet):
         return Message.objects.select_related('sender', 'receiver', 'parent_message').prefetch_related(
             'replies__sender',
             'replies__receiver'
+        ).only(
+            'id', 'content', 'timestamp', 'is_read', 'read_at', 'edited',
+            'sender__id', 'sender__email', 'sender__first_name', 'sender__last_name',
+            'receiver__id', 'receiver__email', 'receiver__first_name', 'receiver__last_name'
         )
 
     @method_decorator(cache_page(60))  # Cache for 60 seconds
@@ -70,7 +74,9 @@ class MessageViewSet(viewsets.ModelViewSet):
         
         messages = Message.objects.filter(
             conversation__conversation_id=conversation_id
-        ).select_related('sender', 'receiver').prefetch_related('replies')
+        ).select_related('sender', 'receiver').prefetch_related('replies').only(
+            'id', 'content', 'timestamp', 'sender__email', 'sender__first_name', 'sender__last_name'
+        )
         
         serializer = self.get_serializer(messages, many=True)
         return Response(serializer.data)
@@ -80,7 +86,9 @@ class MessageViewSet(viewsets.ModelViewSet):
         """
         Get unread messages for the current user using custom manager.
         """
-        unread_messages = Message.unread.unread_for_user(request.user)
+        unread_messages = Message.unread.unread_for_user(request.user).only(
+            'id', 'content', 'timestamp', 'sender__email', 'sender__first_name', 'sender__last_name'
+        )
         serializer = self.get_serializer(unread_messages, many=True)
         return Response(serializer.data)
 
