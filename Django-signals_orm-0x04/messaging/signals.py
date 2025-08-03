@@ -115,16 +115,7 @@ def handle_message_deletion_notification(sender, instance, **kwargs):
     """
     Signal to handle notifications when messages are deleted.
     """
-    # Create notification for message deletion
-    try:
-        Notification.objects.create(
-            user=instance.receiver,
-            message=instance,
-            notification_type='message_deleted',
-            title=f"Message deleted by {instance.sender.get_full_name() or instance.sender.email}",
-            content=f"A message sent to you has been deleted."
-        )
-        print(f"Message deletion notification created for {instance.receiver.email}")
-    except:
-        # Handle case where user might have been deleted
-        print(f"Could not create deletion notification for message {instance.id}") 
+    # Note: We can't create notifications for deleted messages
+    # as the message instance is already deleted
+    # This signal is mainly for logging purposes
+    print(f"Message {instance.id} deleted by {instance.sender.email if instance.sender else 'unknown'}") 

@@ -17,11 +17,21 @@ class MessageSerializer(serializers.ModelSerializer):
     """Serializer for Message model."""
     sender = UserSerializer(read_only=True)
     receiver = UserSerializer(read_only=True)
+    parent_message = serializers.PrimaryKeyRelatedField(read_only=True)
+    replies = serializers.SerializerMethodField()
     
     class Meta:
         model = Message
-        fields = ['id', 'message_id', 'sender', 'receiver', 'content', 'timestamp', 'edited', 'edited_at', 'is_read', 'read_at']
+        fields = [
+            'id', 'message_id', 'sender', 'receiver', 'content', 'timestamp', 
+            'edited', 'edited_at', 'is_read', 'read_at', 'parent_message', 'replies'
+        ]
         read_only_fields = ['id', 'message_id', 'timestamp', 'edited_at']
+    
+    def get_replies(self, obj):
+        """Get replies to this message."""
+        replies = obj.replies.all()
+        return MessageSerializer(replies, many=True, context=self.context).data
 
 
 class NotificationSerializer(serializers.ModelSerializer):
@@ -38,11 +48,16 @@ class NotificationSerializer(serializers.ModelSerializer):
 class ConversationSerializer(serializers.ModelSerializer):
     """Serializer for Conversation model."""
     participants = UserSerializer(many=True, read_only=True)
+    message_count = serializers.SerializerMethodField()
     
     class Meta:
         model = Conversation
-        fields = ['id', 'conversation_id', 'participants', 'created_at', 'updated_at', 'is_active']
+        fields = ['id', 'conversation_id', 'participants', 'created_at', 'updated_at', 'is_active', 'message_count']
         read_only_fields = ['id', 'conversation_id', 'created_at', 'updated_at']
+    
+    def get_message_count(self, obj):
+        """Get the number of messages in this conversation."""
+        return obj.messages.count()
 
 
 class MessageHistorySerializer(serializers.ModelSerializer):
@@ -53,4 +68,19 @@ class MessageHistorySerializer(serializers.ModelSerializer):
     class Meta:
         model = MessageHistory
         fields = ['id', 'message', 'old_content', 'edited_by', 'edited_at', 'edit_reason']
-        read_only_fields = ['id', 'edited_at'] 
+        read_only_fields = ['id', 'edited_at']
+
+
+class ThreadedMessageSerializer(serializers.ModelSerializer):
+    """Serializer for threaded messages with replies."""
+    sender = UserSerializer(read_only=True)
+    receiver = UserSerializer(read_only=True)
+    replies = MessageSerializer(many=True, read_only=True)
+    
+    class Meta:
+        model = Message
+        fields = [
+            'id', 'message_id', 'sender', 'receiver', 'content', 'timestamp',
+            'edited', 'edited_at', 'is_read', 'read_at', 'replies'
+        ]
+        read_only_fields = ['id', 'message_id', 'timestamp', 'edited_at'] 

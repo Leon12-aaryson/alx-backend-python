@@ -1,6 +1,7 @@
 from django.test import TestCase
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+from django.core.cache import cache
 from .models import Message, Notification, MessageHistory, Conversation
 
 
@@ -81,6 +82,49 @@ class MessagingModelsTestCase(TestCase):
         self.assertEqual(history.edited_by, self.user1)
         self.assertEqual(history.edit_reason, 'Typo correction')
 
+    def test_threaded_message_creation(self):
+        """Test threaded message creation with parent_message."""
+        parent_message = Message.objects.create(
+            sender=self.user1,
+            receiver=self.user2,
+            content='Parent message'
+        )
+        reply_message = Message.objects.create(
+            sender=self.user2,
+            receiver=self.user1,
+            content='Reply to parent message',
+            parent_message=parent_message
+        )
+        self.assertEqual(reply_message.parent_message, parent_message)
+        self.assertEqual(parent_message.replies.count(), 1)
+        self.assertEqual(parent_message.replies.first(), reply_message)
+
+    def test_unread_messages_manager(self):
+        """Test custom unread messages manager."""
+        # Create read and unread messages
+        read_message = Message.objects.create(
+            sender=self.user1,
+            receiver=self.user2,
+            content='Read message',
+            is_read=True
+        )
+        unread_message = Message.objects.create(
+            sender=self.user1,
+            receiver=self.user2,
+            content='Unread message',
+            is_read=False
+        )
+        
+        # Test unread manager
+        unread_messages = Message.unread.all()
+        self.assertEqual(unread_messages.count(), 1)
+        self.assertEqual(unread_messages.first(), unread_message)
+        
+        # Test for_user method
+        user_unread = Message.unread.for_user(self.user2)
+        self.assertEqual(user_unread.count(), 1)
+        self.assertEqual(user_unread.first(), unread_message)
+
 
 class MessagingSignalsTestCase(TestCase):
     """Test case for messaging signals functionality."""
@@ -155,6 +199,32 @@ class MessagingSignalsTestCase(TestCase):
         )
         self.assertEqual(edit_notifications.count(), 1)
 
+    def test_user_deletion_signal(self):
+        """Test that user deletion triggers cleanup signal."""
+        # Create messages and notifications for the user
+        message = Message.objects.create(
+            sender=self.user1,
+            receiver=self.user2,
+            content='Test message'
+        )
+        notification = Notification.objects.create(
+            user=self.user2,
+            message=message,
+            notification_type='new_message',
+            title='Test notification',
+            content='Test content'
+        )
+        
+        # Store user ID before deletion
+        user1_id = self.user1.id
+        
+        # Delete user (this should trigger the post_delete signal)
+        self.user1.delete()
+        
+        # Check that related data is cleaned up
+        self.assertEqual(Message.objects.filter(sender_id=user1_id).count(), 0)
+        self.assertEqual(Notification.objects.filter(user_id=user1_id).count(), 0)
+
 
 class MessagingORMTestsCase(TestCase):
     """Test case for advanced ORM operations and queries."""
@@ -206,11 +276,91 @@ class MessagingORMTestsCase(TestCase):
     def test_complex_queries_with_q_objects(self):
         """Test complex queries using Q objects."""
         from django.db.models import Q
-        messages = Message.objects.filter(
-            Q(sender=self.user1) | Q(receiver=self.user2)
-        )
-        self.assertEqual(messages.count(), 2)
+        
+        # Test AND query
         messages = Message.objects.filter(
             Q(sender=self.user1) & Q(receiver=self.user2)
         )
-        self.assertEqual(messages.count(), 1)
+        self.assertEqual(messages.count(), 1)  # Only message1 is from user1 to user2
+        
+        # Test OR query
+        messages = Message.objects.filter(
+            Q(sender=self.user1) | Q(receiver=self.user1)
+        )
+        self.assertEqual(messages.count(), 2)  # Both messages involve user1
+
+    def test_threaded_conversation_queries(self):
+        """Test threaded conversation queries with prefetch_related."""
+        # Create a threaded conversation
+        parent_message = Message.objects.create(
+            sender=self.user1,
+            receiver=self.user2,
+            content='Parent message'
+        )
+        reply1 = Message.objects.create(
+            sender=self.user2,
+            receiver=self.user1,
+            content='Reply 1',
+            parent_message=parent_message
+        )
+        reply2 = Message.objects.create(
+            sender=self.user1,
+            receiver=self.user2,
+            content='Reply 2',
+            parent_message=parent_message
+        )
+        
+        # Test optimized query with prefetch_related
+        messages = Message.objects.select_related('sender', 'receiver').prefetch_related(
+            'replies__sender',
+            'replies__receiver'
+        ).filter(parent_message__isnull=True)
+        
+        # Should have 3 parent messages: message1, message2, and parent_message
+        self.assertEqual(messages.count(), 3)
+        parent = messages.filter(id=parent_message.id).first()
+        self.assertEqual(parent.replies.count(), 2)
+
+
+class MessagingCachingTestCase(TestCase):
+    """Test case for caching functionality."""
+    
+    def setUp(self):
+        self.User = get_user_model()
+        self.user1 = self.User.objects.create_user(
+            email='user1@test.com',
+            password='testpass123',
+            first_name='John',
+            last_name='Doe',
+            role='guest'
+        )
+        self.user2 = self.User.objects.create_user(
+            email='user2@test.com',
+            password='testpass123',
+            first_name='Jane',
+            last_name='Smith',
+            role='host'
+        )
+        # Clear cache before each test
+        cache.clear()
+
+    def test_cache_configuration(self):
+        """Test that cache is properly configured."""
+        from django.conf import settings
+        self.assertIn('CACHES', settings.__dict__)
+        self.assertEqual(settings.CACHES['default']['BACKEND'], 
+                        'django.core.cache.backends.locmem.LocMemCache')
+
+    def test_cache_operations(self):
+        """Test basic cache operations."""
+        # Test cache set and get
+        cache.set('test_key', 'test_value', 60)
+        self.assertEqual(cache.get('test_key'), 'test_value')
+        
+        # Test cache timeout
+        cache.set('timeout_key', 'timeout_value', 1)
+        self.assertEqual(cache.get('timeout_key'), 'timeout_value')
+        
+        # Test cache delete
+        cache.delete('test_key')
+        self.assertIsNone(cache.get('test_key'))
