@@ -80,7 +80,7 @@ class MessageViewSet(viewsets.ModelViewSet):
         """
         Get unread messages for the current user using custom manager.
         """
-        unread_messages = Message.unread.for_user(request.user)
+        unread_messages = Message.unread.unread_for_user(request.user)
         serializer = self.get_serializer(unread_messages, many=True)
         return Response(serializer.data)
 

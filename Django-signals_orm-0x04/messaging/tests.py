@@ -120,8 +120,8 @@ class MessagingModelsTestCase(TestCase):
         self.assertEqual(unread_messages.count(), 1)
         self.assertEqual(unread_messages.first(), unread_message)
         
-        # Test for_user method
-        user_unread = Message.unread.for_user(self.user2)
+        # Test unread_for_user method
+        user_unread = Message.unread.unread_for_user(self.user2)
         self.assertEqual(user_unread.count(), 1)
         self.assertEqual(user_unread.first(), unread_message)
 

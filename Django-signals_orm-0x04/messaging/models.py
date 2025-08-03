@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 import uuid
 from datetime import datetime
+from .managers import UnreadMessagesManager
 
 
 class CustomUserManager(BaseUserManager):
@@ -67,18 +68,7 @@ class User(AbstractUser):
         db_table = 'messaging_user'
 
 
-class UnreadMessagesManager(models.Manager):
-    """
-    Custom manager for filtering unread messages.
-    """
-    def get_queryset(self):
-        return super().get_queryset().filter(is_read=False)
-    
-    def for_user(self, user):
-        """Filter unread messages for a specific user."""
-        return self.filter(receiver=user).select_related('sender').only(
-            'id', 'content', 'timestamp', 'sender__email', 'sender__first_name', 'sender__last_name'
-        )
+
 
 
 class Message(models.Model):
