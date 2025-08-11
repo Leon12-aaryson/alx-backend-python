@@ -80,7 +80,7 @@ WSGI_APPLICATION = 'messaging_app.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': config('DB_NAME', default='messaging_db'),
+        'NAME': config('MYSQL_DB', default='messaging_db'),
         'USER': config('DB_USER', default='messaging_user'),
         'PASSWORD': config('DB_PASSWORD', default='messaging_password'),
         'HOST': config('DB_HOST', default='localhost'),

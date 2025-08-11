@@ -20,20 +20,21 @@ services:
     depends_on:
       - db
     command: >
-      sh -c "python manage.py migrate &&
-              python manage.py collectstatic --noinput &&
-              gunicorn --bind 0.0.0.0:8000 messaging_app.wsgi:application"
+      sh -c "until nc -z db 3306; do echo 'Waiting for MySQL...'; sleep 2; done &&
+              python3 manage.py migrate &&
+              python3 manage.py collectstatic --noinput &&
+              python3 manage.py runserver 0.0.0.0:8000"
 
   db:
     image: mysql:8.0
     restart: always
     environment:
-      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_DB=${MYSQL_DB}
       - MYSQL_USER=${MYSQL_USER}
       - MYSQL_PASSWORD=${MYSQL_PASSWORD}
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
       - ./mysql/init:/docker-entrypoint-initdb.d
