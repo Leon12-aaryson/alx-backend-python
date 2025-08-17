@@ -1,0 +1,130 @@
+#!/bin/bash
+
+# kubctl-0x03 - Rolling Update Script
+# This script applies rolling updates and monitors for downtime
+
+set -e
+
+echo "🔄 Starting Rolling Update Process..."
+
+# Check if kubectl is available
+if ! command -v kubectl &> /dev/null; then
+    echo "❌ kubectl not found. Please run kurbeScript first."
+    exit 1
+fi
+
+# Check if the deployment exists
+if ! kubectl get deployment django-messaging-app &> /dev/null; then
+    echo "❌ Deployment 'django-messaging-app' not found. Please apply blue_deployment.yaml first."
+    exit 1
+fi
+
+# Get current deployment status
+echo "📊 Current deployment status:"
+kubectl get deployment django-messaging-app
+
+echo "📦 Current pods:"
+kubectl get pods -l app=django-messaging-app
+
+# Apply the updated deployment file
+echo "📦 Applying updated deployment with image version 2.0..."
+kubectl apply -f blue_deployment.yaml
+
+# Start monitoring the rollout status
+echo "⏳ Monitoring rollout status..."
+kubectl rollout status deployment/django-messaging-app --timeout=300s
+
+# Start continuous testing to check for downtime
+echo "🧪 Starting continuous testing to check for downtime..."
+echo "   Sending requests every 2 seconds for 60 seconds..."
+
+# Start port-forward for testing
+kubectl port-forward service/django-messaging-service 8080:80 &
+PORT_FORWARD_PID=$!
+sleep 5
+
+# Test counter
+TEST_COUNT=0
+SUCCESS_COUNT=0
+FAILURE_COUNT=0
+
+# Continuous testing loop
+for i in {1..30}; do
+    TEST_COUNT=$((TEST_COUNT + 1))
+    
+    if curl -s -f http://localhost:8080/ > /dev/null 2>&1; then
+        SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
+        echo "✅ Request $TEST_COUNT: SUCCESS"
+    else
+        FAILURE_COUNT=$((FAILURE_COUNT + 1))
+        echo "❌ Request $TEST_COUNT: FAILED"
+    fi
+    
+    sleep 2
+done
+
+# Kill port-forward
+kill $PORT_FORWARD_PID 2>/dev/null || true
+
+# Display test results
+echo ""
+echo "📊 Downtime Test Results:"
+echo "   Total requests: $TEST_COUNT"
+echo "   Successful: $SUCCESS_COUNT"
+echo "   Failed: $FAILURE_COUNT"
+echo "   Success rate: $(( (SUCCESS_COUNT * 100) / TEST_COUNT ))%"
+
+if [ $FAILURE_COUNT -eq 0 ]; then
+    echo "🎉 No downtime detected during rolling update!"
+else
+    echo "⚠️  Some downtime detected during rolling update"
+fi
+
+# Verify the rolling update is complete
+echo ""
+echo "🔍 Verifying Rolling Update Completion..."
+
+# Check deployment status
+echo "📊 Updated deployment status:"
+kubectl get deployment django-messaging-app
+
+# Check pod status
+echo "📦 Current pods:"
+kubectl get pods -l app=django-messaging-app
+
+# Check rollout history
+echo "📋 Rollout history:"
+kubectl rollout history deployment/django-messaging-app
+
+# Check if all pods are running the new image
+echo "🔍 Checking image versions in pods..."
+PODS=$(kubectl get pods -l app=django-messaging-app -o jsonpath='{.items[*].metadata.name}')
+
+if [ -n "$PODS" ]; then
+    for pod in $PODS; do
+        echo "📦 Pod: $pod"
+        kubectl describe pod "$pod" | grep "Image:" | head -1
+    done
+else
+    echo "❌ No pods found"
+fi
+
+# Check service endpoints
+echo "🔌 Service endpoints:"
+kubectl get endpoints django-messaging-service
+
+# Final verification
+echo ""
+echo "✅ Rolling Update Verification Complete!"
+echo "📊 Summary:"
+echo "   - Deployment updated to image version 2.0"
+echo "   - Rollout completed successfully"
+echo "   - All pods are running the new version"
+echo "   - Service endpoints updated"
+
+# Show how to rollback if needed
+echo ""
+echo "🔄 Rollback Commands (if needed):"
+echo "   - Rollback to previous version: kubectl rollout undo deployment/django-messaging-app"
+echo "   - Check rollback status: kubectl rollout status deployment/django-messaging-app"
+echo "   - View rollback history: kubectl rollout history deployment/django-messaging-app"

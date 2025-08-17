@@ -1,0 +1,98 @@
+#!/bin/bash
+
+# kubctl-0x01 - Kubernetes Scaling and Load Testing Script
+# This script scales the Django app to 3 replicas and performs load testing
+
+set -e
+
+echo "🚀 Starting Kubernetes Scaling and Load Testing..."
+
+# Check if kubectl is available
+if ! command -v kubectl &> /dev/null; then
+    echo "❌ kubectl not found. Please run kurbeScript first."
+    exit 1
+fi
+
+# Check if the deployment exists
+if ! kubectl get deployment django-messaging-app &> /dev/null; then
+    echo "❌ Deployment 'django-messaging-app' not found. Please apply deployment.yaml first."
+    exit 1
+fi
+
+echo "📈 Scaling Django app to 3 replicas..."
+kubectl scale deployment django-messaging-app --replicas=3
+
+echo "⏳ Waiting for all pods to be ready..."
+kubectl wait --for=condition=Ready pods -l app=django-messaging-app --timeout=300s
+
+echo "📊 Verifying multiple pods are running..."
+kubectl get pods -l app=django-messaging-app
+
+# Get the service IP for load testing
+echo "🔍 Getting service information..."
+kubectl get service django-messaging-service
+
+# Check if wrk is installed for load testing
+if ! command -v wrk &> /dev/null; then
+    echo "📦 Installing wrk for load testing..."
+    
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        # macOS
+        if command -v brew &> /dev/null; then
+            brew install wrk
+        else
+            echo "⚠️  Homebrew not found. Skipping load testing."
+            echo "   Install wrk manually: brew install wrk"
+        fi
+    elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        # Linux
+        if command -v apt-get &> /dev/null; then
+            sudo apt-get update && sudo apt-get install -y wrk
+        elif command -v yum &> /dev/null; then
+            sudo yum install -y wrk
+        else
+            echo "⚠️  Package manager not found. Skipping load testing."
+            echo "   Install wrk manually for your distribution"
+        fi
+    else
+        echo "⚠️  Unsupported OS. Skipping load testing."
+    fi
+fi
+
+# Perform load testing if wrk is available
+if command -v wrk &> /dev/null; then
+    echo "🔥 Starting load testing with wrk..."
+    
+    # Get the service IP (we'll use port-forward for external access)
+    echo "🔌 Setting up port-forward for load testing..."
+    kubectl port-forward service/django-messaging-service 8080:80 &
+    PORT_FORWARD_PID=$!
+    
+    # Wait for port-forward to be ready
+    sleep 5
+    
+    echo "📊 Running load test for 30 seconds..."
+    wrk -t4 -c100 -d30s http://localhost:8080/ || echo "⚠️  Load testing completed (some errors may be expected for a basic Django app)"
+    
+    # Kill port-forward
+    kill $PORT_FORWARD_PID 2>/dev/null || true
+else
+    echo "⚠️  wrk not available. Skipping load testing."
+fi
+
+echo "📈 Monitoring resource usage..."
+echo "📊 Pod resource usage:"
+kubectl top pods -l app=django-messaging-app
+
+echo "📊 Node resource usage:"
+kubectl top nodes
+
+echo "📋 Current deployment status:"
+kubectl get deployment django-messaging-app
+
+echo "📦 Pod details:"
+kubectl describe pods -l app=django-messaging-app
+
+echo "✅ Scaling and load testing complete!"
+echo "🔍 To check logs: kubectl logs -l app=django-messaging-app"
+echo "🌐 To access the app: kubectl port-forward service/django-messaging-service 8080:80"

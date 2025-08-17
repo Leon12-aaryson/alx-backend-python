@@ -1,0 +1,32 @@
+# Commands to set up Kubernetes Ingress for External Access
+
+# 1. Install Nginx Ingress Controller
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.8.2/deploy/static/provider/cloud/deploy.yaml
+
+# 2. Wait for the Ingress controller to be ready
+kubectl wait --namespace ingress-nginx \
+  --for=condition=ready pod \
+  --selector=app.kubernetes.io/component=controller \
+  --timeout=120s
+
+# 3. Apply the Ingress configuration
+kubectl apply -f ingress.yaml
+
+# 4. Verify the Ingress is created
+kubectl get ingress
+
+# 5. Check the Ingress controller status
+kubectl get pods -n ingress-nginx
+
+# 6. Get the external IP (for cloud providers) or use port-forward for local testing
+kubectl get service -n ingress-nginx
+
+# 7. For local testing with minikube, enable the ingress addon
+minikube addons enable ingress
+
+# 8. Apply the Ingress configuration again after enabling the addon
+kubectl apply -f ingress.yaml
+
+# 9. Test the Ingress (replace with actual IP if available)
+curl -H "Host: localhost" http://localhost/api/
+curl -H "Host: localhost" http://localhost/

@@ -1,0 +1,91 @@
+#!/bin/bash
+
+# kurbeScript - Kubernetes Setup and Verification Script
+# This script installs minikube, starts a cluster, and verifies it's running
+
+set -e
+
+echo "🚀 Starting Kubernetes Setup..."
+
+# Check if minikube is installed
+if ! command -v minikube &> /dev/null; then
+    echo "📦 Installing minikube..."
+    
+    # Install minikube based on OS
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        # macOS
+        if command -v brew &> /dev/null; then
+            brew install minikube
+        else
+            echo "❌ Homebrew not found. Please install Homebrew first:"
+            echo "   /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
+            exit 1
+        fi
+    elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        # Linux
+        curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+        sudo install minikube-linux-amd64 /usr/local/bin/minikube
+        rm minikube-linux-amd64
+    else
+        echo "❌ Unsupported OS. Please install minikube manually from:"
+        echo "   https://minikube.sigs.k8s.io/docs/start/"
+        exit 1
+    fi
+else
+    echo "✅ minikube is already installed"
+fi
+
+# Check if kubectl is installed
+if ! command -v kubectl &> /dev/null; then
+    echo "📦 Installing kubectl..."
+    
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        # macOS
+        if command -v brew &> /dev/null; then
+            brew install kubectl
+        else
+            echo "❌ Homebrew not found. Please install kubectl manually"
+            exit 1
+        fi
+    elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        # Linux
+        curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+        sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+        rm kubectl
+    else
+        echo "❌ Unsupported OS. Please install kubectl manually from:"
+        echo "   https://kubernetes.io/docs/tasks/tools/install-kubectl/"
+        exit 1
+    fi
+else
+    echo "✅ kubectl is already installed"
+fi
+
+# Start minikube cluster
+echo "🚀 Starting Kubernetes cluster..."
+minikube start --driver=docker --memory=4096 --cpus=2
+
+# Wait for cluster to be ready
+echo "⏳ Waiting for cluster to be ready..."
+kubectl wait --for=condition=Ready nodes --all --timeout=300s
+
+# Verify cluster is running
+echo "🔍 Verifying cluster status..."
+kubectl cluster-info
+
+# Check cluster status
+echo "📊 Cluster status:"
+kubectl get nodes
+
+# Retrieve available pods (should be empty initially)
+echo "📦 Available pods:"
+kubectl get pods --all-namespaces
+
+# Show minikube status
+echo "📋 Minikube status:"
+minikube status
+
+echo "✅ Kubernetes cluster setup complete!"
+echo "🌐 To access the cluster dashboard: minikube dashboard"
+echo "🔧 To stop the cluster: minikube stop"
+echo "🗑️  To delete the cluster: minikube delete"
