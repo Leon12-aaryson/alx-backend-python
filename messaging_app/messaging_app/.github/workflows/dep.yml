@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 env:
-  DOCKER_IMAGE: your-dockerhub-username/messaging-app
+  DOCKER_IMAGE: django-messaging-app
 
 jobs:
   build-and-push:
@@ -61,6 +61,13 @@ jobs:
     - name: Deploy to production
       run: |
         echo "Deploying version ${{ github.sha }} to production"
-        # Add your deployment commands here
-        # For example: kubectl apply -f k8s/
-        # Or: docker-compose -f docker-compose.prod.yml up -d
+        # Deploy using existing Kubernetes configurations
+        kubectl apply -f blue_deployment.yaml
+        kubectl apply -f green_deployment.yaml
+        kubectl apply -f kubeservice.yaml
+        
+        # Wait for deployments to be ready
+        kubectl wait --for=condition=Available deployment/django-messaging-app --timeout=300s
+        kubectl wait --for=condition=Available deployment/django-messaging-app-green --timeout=300s
+        
+        echo "✅ Kubernetes deployment complete!" 
